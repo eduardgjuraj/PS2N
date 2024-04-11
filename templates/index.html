@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Arduino Temperature</title>
+    <style>
+        
+        .toggle-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .status-box {
+            position: absolute;
+            top: 55px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            display: inline-block;
+            margin-left: 10px;
+            border: 1px solid black;
+            transition: background-color 0.3s ease;
+        }
+
+        .status-on {
+            background-color: green;
+        }
+
+        .status-off {
+            background-color: red;
+
+        }
+
+        #led-status {
+            position: absolute;
+            top: 40px;
+            right: 35px;
+            font-size: 16px;
+            color: black;
+        }
+
+        p {
+            margin-bottom: 20px;
+            
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Arduino Temperature</h1>
+    <p>Temperature: {{ temperatura }}&deg;C</p>
+
+    <button class="toggle-button" onclick="toggleLED()">Toggle LED</button> <!-- buton pt a schimba led-ul, ON / OFF-->
+
+    <p id="led-status">LED is {% if led_state %}ON{% else %}OFF{% endif %}</p> <!-- mesaj care zice starea led-ului-->
+
+    <div id="status-box" class="status-box {% if led_state %}status-on{% else %}status-off{% endif %}"></div>
+
+
+    <script>
+        function toggleLED() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    document.getElementById("status-box").className = "status-box " + this.responseText;
+                    document.getElementById("led-status").innerText = "LED is " + (this.responseText === "status-on" ? "ON" : "OFF");
+                }
+            };
+            xhttp.open("POST", "/toggle_led", true);
+            xhttp.send();
+        }
+    </script>
+
+    <!DOCTYPE html>
+    <html>
+
+    <head>
+        <title>Send Messages to Arduino</title>
+        <script>
+            function sendMessage() {
+                var message = document.getElementById("message").value;
+                var xhttp = new XMLHttpRequest();
+                xhttp.open("POST", "/send_message", true);
+                xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+                xhttp.send("message=" + message);
+            }
+        </script>
+    </head>
+
+    <body>
+        <p>Enter your message to send to the microcontroller</p>
+        <input type="text" id="message">
+        <button onclick="sendMessage()">Send</button>
+    </body>
+
+    </html>
+
+
+</body>
+
+</html>

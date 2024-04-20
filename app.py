@@ -12,6 +12,8 @@ def index():
     try:
         temperatura = ser.readline().decode().strip()
         return render_template('index.html', temperatura=temperatura, led_state=led_state)
+        time.sleep(2)
+        ser.close()
     except serial.SerialException:
         return "Serial port error"
 
@@ -22,16 +24,19 @@ def toggle_led():
         led_state = not led_state
         ser.write(b'A' if led_state else b'S')
         return 'status-on' if led_state else 'status-off'
+        time.sleep(2)
+        ser.close()
     except serial.SerialException:
         return "Serial port error"
 
 @app.route('/send_message', methods=['POST'])
 def send_message():
-    message = request.form['message']
-    messages.append(message)
-    # Trimiteti mesajul la Arduino prin portul serial
-    # Arduino va gestiona stocarea sn EEPROM si alte actiuni
-    return "Message sent to Arduino: " + message
+    if request.method == 'POST':
+        message = request.form['message']
+        ser.write((message + "\n").encode())
+        return "Message sent to Arduino: " + message
+        time.sleep(2)
+        ser.close()
 
 if __name__ == '__main__':
     app.run(debug=True, port = 5001)

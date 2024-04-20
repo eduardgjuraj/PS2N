@@ -2,9 +2,8 @@
 <html>
 
 <head>
-    <title>Arduino Temperature</title>
+    <title>Arduino Microcontroller</title>
     <style>
-        
         .toggle-button {
             position: absolute;
             top: 10px;
@@ -48,13 +47,13 @@
 
         p {
             margin-bottom: 20px;
-            
+
         }
     </style>
 </head>
 
 <body>
-    <h1>Arduino Temperature</h1>
+    <h4>Arduino Temperature</h4>
     <p>Temperature: {{ temperatura }}&deg;C</p>
 
     <button class="toggle-button" onclick="toggleLED()">Toggle LED</button> <!-- buton pt a schimba led-ul, ON / OFF-->
@@ -78,30 +77,11 @@
         }
     </script>
 
-    <!DOCTYPE html>
-    <html>
-
-    <head>
-        <title>Send Messages to Arduino</title>
-        <script>
-            function sendMessage() {
-                var message = document.getElementById("message").value;
-                var xhttp = new XMLHttpRequest();
-                xhttp.open("POST", "/send_message", true);
-                xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-                xhttp.send("message=" + message);
-            }
-        </script>
-    </head>
-
-    <body>
-        <p>Enter your message to send to the microcontroller</p>
-        <input type="text" id="message">
-        <button onclick="sendMessage()">Send</button>
-    </body>
-
-    </html>
-
+    <h4>Enter your message to send to the microcontroller</h4>
+    <form action="/send_message" method="post">
+        <input type="text" id="message" name="message">
+        <button type="submit">Send</button>
+    </form>
 
 </body>
 

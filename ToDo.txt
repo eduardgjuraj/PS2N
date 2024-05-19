@@ -1,0 +1,4 @@
+() Add delete button
+() Add automatic flood registration 
+() Add email notification at each new flood registration
+() Implement web interface to Cloud, with Azure

@@ -34,7 +34,6 @@
 
         .status-off {
             background-color: red;
-
         }
 
         #led-status {
@@ -47,7 +46,15 @@
 
         p {
             margin-bottom: 20px;
+        }
 
+        ul.messages-list, ul.water-levels-list {
+            list-style-type: none; /* Remove bullet points */
+            padding: 0; /* Remove padding */
+        }
+
+        ul.messages-list li, ul.water-levels-list li {
+            margin-bottom: 5px; /* Add some space between messages */
         }
     </style>
 </head>
@@ -56,12 +63,11 @@
     <h4>Arduino Temperature</h4>
     <p>Temperature: {{ temperatura }}&deg;C</p>
 
-    <button class="toggle-button" onclick="toggleLED()">Toggle LED</button> <!-- buton pt a schimba led-ul, ON / OFF-->
+    <button class="toggle-button" onclick="toggleLED()">Toggle LED</button> <!-- Button to toggle LED -->
 
-    <p id="led-status">LED is {% if led_state %}ON{% else %}OFF{% endif %}</p> <!-- mesaj care zice starea led-ului-->
+    <p id="led-status">LED is {% if led_state %}ON{% else %}OFF{% endif %}</p> <!-- LED status message -->
 
     <div id="status-box" class="status-box {% if led_state %}status-on{% else %}status-off{% endif %}"></div>
-
 
     <script>
         function toggleLED() {
@@ -82,6 +88,28 @@
         <input type="text" id="message" name="message">
         <button type="submit">Send</button>
     </form>
+
+    <h4>Last 10 Messages</h4>
+    <ul class="messages-list">
+        {% for message in messages %}
+            <li>{{ loop.index }}. {{ message }}
+                <form action="/delete_message/{{ loop.index0 }}" method="post" style="display:inline;">
+                    <button type="submit">Delete</button>
+                </form>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <h4>Last 10 Water Sensor Messages</h4>
+    <ul class="water-levels-list">
+        {% for water_level in water_levels %}
+            <li>{{ loop.index }}. {{ water_level }}
+                <form action="/delete_water_message/{{ loop.index0 }}" method="post" style="display:inline;">
+                    <button type="submit">Delete</button>
+                </form>
+            </li>
+        {% endfor %}
+    </ul>
 
 </body>
 

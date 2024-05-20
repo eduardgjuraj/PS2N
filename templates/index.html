@@ -47,15 +47,6 @@
         p {
             margin-bottom: 20px;
         }
-
-        ul.messages-list, ul.water-levels-list {
-            list-style-type: none; /* Remove bullet points */
-            padding: 0; /* Remove padding */
-        }
-
-        ul.messages-list li, ul.water-levels-list li {
-            margin-bottom: 5px; /* Add some space between messages */
-        }
     </style>
 </head>
 
@@ -63,11 +54,43 @@
     <h4>Arduino Temperature</h4>
     <p>Temperature: {{ temperatura }}&deg;C</p>
 
-    <button class="toggle-button" onclick="toggleLED()">Toggle LED</button> <!-- Button to toggle LED -->
-
-    <p id="led-status">LED is {% if led_state %}ON{% else %}OFF{% endif %}</p> <!-- LED status message -->
-
+    <button class="toggle-button" onclick="toggleLED()">Toggle LED</button>
+    <p id="led-status">LED is {% if led_state %}ON{% else %}OFF{% endif %}</p>
     <div id="status-box" class="status-box {% if led_state %}status-on{% else %}status-off{% endif %}"></div>
+
+    <h4>Enter your message to send to the microcontroller</h4>
+    <form action="/send_message" method="post">
+        <input type="text" id="message" name="message">
+        <button type="submit">Send</button>
+    </form>
+
+    <h4>Last 10 Messages</h4>
+    <ul>
+        {% for message in messages %}
+            <li>
+                {{ message }}
+                {% if message.strip() != '' %}
+                    <form action="/delete_message/{{ loop.index0 }}" method="post" style="display:inline;">
+                        <button type="submit">Delete</button>
+                    </form>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+
+    <h4>Last 10 Water Sensor Messages</h4>
+    <ul class="water-levels-list">
+        {% for water_level in water_levels %}
+            <li>
+                {{ water_level }}
+                {% if water_level.strip() != '' %}
+                    <form action="/delete_water_message/{{ loop.index0 }}" method="post" style="display:inline;">
+                        <button type="submit">Delete</button>
+                    </form>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
 
     <script>
         function toggleLED() {
@@ -81,35 +104,22 @@
             xhttp.open("POST", "/toggle_led", true);
             xhttp.send();
         }
+
+        function updateWaterSensor() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var response = JSON.parse(this.responseText);
+                    console.log("Updated water sensor value: " + response.water_sensor_value);
+                    // Optionally update the web page with the new water sensor value
+                }
+            };
+            xhttp.open("GET", "/update_water_sensor", true);
+            xhttp.send();
+        }
+
+        setInterval(updateWaterSensor, 5000);  // Update water sensor every 5 seconds
     </script>
-
-    <h4>Enter your message to send to the microcontroller</h4>
-    <form action="/send_message" method="post">
-        <input type="text" id="message" name="message">
-        <button type="submit">Send</button>
-    </form>
-
-    <h4>Last 10 Messages</h4>
-    <ul class="messages-list">
-        {% for message in messages %}
-            <li>{{ loop.index }}. {{ message }}
-                <form action="/delete_message/{{ loop.index0 }}" method="post" style="display:inline;">
-                    <button type="submit">Delete</button>
-                </form>
-            </li>
-        {% endfor %}
-    </ul>
-
-    <h4>Last 10 Water Sensor Messages</h4>
-    <ul class="water-levels-list">
-        {% for water_level in water_levels %}
-            <li>{{ loop.index }}. {{ water_level }}
-                <form action="/delete_water_message/{{ loop.index0 }}" method="post" style="display:inline;">
-                    <button type="submit">Delete</button>
-                </form>
-            </li>
-        {% endfor %}
-    </ul>
 
 </body>
 

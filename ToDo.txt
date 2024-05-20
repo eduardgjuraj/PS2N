@@ -1,4 +1,11 @@
-() Add delete button
-() Add automatic flood registration 
-() Add email notification at each new flood registration
+() Add delete button ---
+() Add automatic flood registration ---
+() Add email notification at each new flood registration ---
 () Implement web interface to Cloud, with Azure
+
+
+cont flood alert ^_^
+
+# floodalertps@gmail.com
+# proiectsincretic2024
+# vlcp hoiu znzo cvlo 

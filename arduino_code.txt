@@ -7,7 +7,7 @@
 #define EEPROM_INITIALIZATION_FLAG 0xA5
 #define SERIAL_MESSAGE_BUFFER_SIZE 100
 
-#define WATER_THRESHOLD 400
+#define WATER_THRESHOLD 145
 #define EEPROM_WATER_TABLE_START_ADDRESS (EEPROM_MESSAGE_TABLE_START_ADDRESS + sizeof(EEPROMMessageTable) + 1)
 
 typedef struct EEPROMMessageEntry {
@@ -69,17 +69,39 @@ static void addEntryToWaterTable(const char *message) {
 
 static void deleteMessageFromTable(uint8_t index) {
     if (index < EEPROM_MESSAGE_TABLE_ENTRIES_SIZE) {
-        messageTable.entry[index].valid = 0;
-        memset(messageTable.entry[index].message, 0, EEPROM_MESSAGE_TABLE_MESSAGE_SIZE);
+        Serial.print("Deleting message at index: ");
+        Serial.println(index);
+        
+        for (int i = index; i < EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1; i++) {
+            messageTable.entry[i] = messageTable.entry[i + 1];
+        }
+        
+        messageTable.entry[EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1].valid = 0;
+        memset(messageTable.entry[EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1].message, 0, EEPROM_MESSAGE_TABLE_MESSAGE_SIZE);
+        
         writeMessageTableToEEPROM();
+        
+        Serial.println("Message table after deletion:");
+        serialCommandReadMessages();
     }
 }
 
 static void deleteWaterMessageFromTable(uint8_t index) {
     if (index < EEPROM_MESSAGE_TABLE_ENTRIES_SIZE) {
-        waterTable.entry[index].valid = 0;
-        memset(waterTable.entry[index].message, 0, EEPROM_MESSAGE_TABLE_MESSAGE_SIZE);
+        Serial.print("Deleting water message at index: ");
+        Serial.println(index);
+        
+        for (int i = index; i < EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1; i++) {
+            waterTable.entry[i] = waterTable.entry[i + 1];
+        }
+        
+        waterTable.entry[EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1].valid = 0;
+        memset(waterTable.entry[EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1].message, 0, EEPROM_MESSAGE_TABLE_MESSAGE_SIZE);
+        
         writeWaterTableToEEPROM();
+        
+        Serial.println("Water table after deletion:");
+        serialCommandReadWaterLevels();
     }
 }
 
@@ -177,14 +199,14 @@ String getCommandType(const String& command) {
         return "L";
     } else if (command.startsWith("R")) {
         return "R";
-    } else if (command.startsWith("D:")) {
+    } else if (command.startsWith("D")) {
         return "D";
     } else if (command.startsWith("S")) {
         return "S";
-    } else if (command.startsWith("DM:")) {
-        return "DM";
-    } else if (command.startsWith("DW:")) {
-        return "DW";
+    } else if (command.startsWith("M:")) {
+        return "M";
+    } else if (command.startsWith("w:")) {
+        return "w";
     } else {
         return "UNKNOWN";
     }
@@ -200,7 +222,7 @@ void setup() {
     readMessageTableFromEEPROM();
     readWaterTableFromEEPROM();
     Serial.setTimeout(100);
-    Serial.println("Arduino is ready. Send commands: 'T', 'W:<timestamp>|<message>', 'L', 'R', 'D:<message>', 'S', 'DM:<index>', 'DW:<index>'");
+    Serial.println("Arduino is ready. Send commands: 'T', 'W:<timestamp>|<message>', 'L', 'R', 'D:<message>', 'S', 'M:<index>', 'w:<index>'");
 }
 
 void loop() {
@@ -242,16 +264,16 @@ void loop() {
                 serialCommandReadWaterLevels();
                 break;
 
-            case 'DM':
-                serialCommandDeleteMessage(command.substring(3));
+            case 'M':
+                serialCommandDeleteMessage(command.substring(2));
                 break;
 
-            case 'DW':
-                serialCommandDeleteWaterMessage(command.substring(3));
+            case 'w':
+                serialCommandDeleteWaterMessage(command.substring(2));
                 break;
 
             default:
-                Serial.println("Unknown command. Please send 'T', 'W:<timestamp>|<message>', 'L', 'R', 'D:<message>', 'S', 'DM:<index>', 'DW:<index>'.");
+                Serial.println("Unknown command. Please send 'T', 'W:<timestamp>|<message>', 'L', 'R', 'D:<message>', 'S', 'M:<index>', 'w:<index>'.");
                 break;
         }
     }

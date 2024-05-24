@@ -1,0 +1,280 @@
+#include <EEPROM.h>
+
+#define EEPROM_MESSAGE_TABLE_MESSAGE_SIZE 50
+#define EEPROM_MESSAGE_TABLE_ENTRIES_SIZE 10
+#define EEPROM_MESSAGE_TABLE_START_ADDRESS 0
+#define EEPROM_INITIALIZATION_FLAG_ADDRESS (EEPROM_MESSAGE_TABLE_START_ADDRESS + sizeof(EEPROMMessageTable))
+#define EEPROM_INITIALIZATION_FLAG 0xA5
+#define SERIAL_MESSAGE_BUFFER_SIZE 100
+
+#define WATER_THRESHOLD 145
+#define EEPROM_WATER_TABLE_START_ADDRESS (EEPROM_MESSAGE_TABLE_START_ADDRESS + sizeof(EEPROMMessageTable) + 1)
+
+typedef struct EEPROMMessageEntry {
+    uint8_t valid;
+    char message[EEPROM_MESSAGE_TABLE_MESSAGE_SIZE];
+} EEPROMMessageEntry;
+
+typedef struct EEPROMMessageTable {
+    EEPROMMessageEntry entry[EEPROM_MESSAGE_TABLE_ENTRIES_SIZE];
+} EEPROMMessageTable;
+
+typedef struct EEPROMWaterEntry {
+    uint8_t valid;
+    char message[EEPROM_MESSAGE_TABLE_MESSAGE_SIZE];
+} EEPROMWaterEntry;
+
+typedef struct EEPROMWaterTable {
+    EEPROMWaterEntry entry[EEPROM_MESSAGE_TABLE_ENTRIES_SIZE];
+} EEPROMWaterTable;
+
+static EEPROMMessageTable messageTable = {0};
+static EEPROMWaterTable waterTable = {0};
+
+static void readMessageTableFromEEPROM(void) {
+    EEPROM.get(EEPROM_MESSAGE_TABLE_START_ADDRESS, messageTable);
+}
+
+static void writeMessageTableToEEPROM(void) {
+    EEPROM.put(EEPROM_MESSAGE_TABLE_START_ADDRESS, messageTable);
+}
+
+static void readWaterTableFromEEPROM(void) {
+    EEPROM.get(EEPROM_WATER_TABLE_START_ADDRESS, waterTable);
+}
+
+static void writeWaterTableToEEPROM(void) {
+    EEPROM.put(EEPROM_WATER_TABLE_START_ADDRESS, waterTable);
+}
+
+static void addEntryToMessageTable(const char *message) {
+    for (int i = EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1; i > 0; i--) {
+        messageTable.entry[i] = messageTable.entry[i - 1];
+    }
+    messageTable.entry[0].valid = 1;
+    strncpy(messageTable.entry[0].message, message, EEPROM_MESSAGE_TABLE_MESSAGE_SIZE - 1);
+    messageTable.entry[0].message[EEPROM_MESSAGE_TABLE_MESSAGE_SIZE - 1] = '\0';
+    writeMessageTableToEEPROM();
+}
+
+static void addEntryToWaterTable(const char *message) {
+    for (int i = EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1; i > 0; i--) {
+        waterTable.entry[i] = waterTable.entry[i - 1];
+    }
+    waterTable.entry[0].valid = 1;
+    strncpy(waterTable.entry[0].message, message, EEPROM_MESSAGE_TABLE_MESSAGE_SIZE - 1);
+    waterTable.entry[0].message[EEPROM_MESSAGE_TABLE_MESSAGE_SIZE - 1] = '\0';
+    writeWaterTableToEEPROM();
+}
+
+static void deleteMessageFromTable(uint8_t index) {
+    if (index < EEPROM_MESSAGE_TABLE_ENTRIES_SIZE) {
+        Serial.print("Deleting message at index: ");
+        Serial.println(index);
+        
+        for (int i = index; i < EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1; i++) {
+            messageTable.entry[i] = messageTable.entry[i + 1];
+        }
+        
+        messageTable.entry[EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1].valid = 0;
+        memset(messageTable.entry[EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1].message, 0, EEPROM_MESSAGE_TABLE_MESSAGE_SIZE);
+        
+        writeMessageTableToEEPROM();
+        
+        Serial.println("Message table after deletion:");
+        serialCommandReadMessages();
+    }
+}
+
+static void deleteWaterMessageFromTable(uint8_t index) {
+    if (index < EEPROM_MESSAGE_TABLE_ENTRIES_SIZE) {
+        Serial.print("Deleting water message at index: ");
+        Serial.println(index);
+        
+        for (int i = index; i < EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1; i++) {
+            waterTable.entry[i] = waterTable.entry[i + 1];
+        }
+        
+        waterTable.entry[EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1].valid = 0;
+        memset(waterTable.entry[EEPROM_MESSAGE_TABLE_ENTRIES_SIZE - 1].message, 0, EEPROM_MESSAGE_TABLE_MESSAGE_SIZE);
+        
+        writeWaterTableToEEPROM();
+        
+        Serial.println("Water table after deletion:");
+        serialCommandReadWaterLevels();
+    }
+}
+
+static void serialCommandReadMessages(void) {
+    for (uint8_t message_nr = 0; message_nr < EEPROM_MESSAGE_TABLE_ENTRIES_SIZE; message_nr++) {
+        if (messageTable.entry[message_nr].valid == 1) {
+            Serial.println(String(message_nr) + "|" + String(messageTable.entry[message_nr].message));
+        } else {
+            Serial.println(String(message_nr) + "|");
+        }
+    }
+}
+
+static void serialCommandReadWaterLevels(void) {
+    for (uint8_t water_nr = 0; water_nr < EEPROM_MESSAGE_TABLE_ENTRIES_SIZE; water_nr++) {
+        if (waterTable.entry[water_nr].valid == 1) {
+            Serial.println(String(water_nr) + "|" + String(waterTable.entry[water_nr].message));
+        } else {
+            Serial.println(String(water_nr) + "|");
+        }
+    }
+}
+
+static void serialCommandWriteMessage(const String& command) {
+    char buffer[EEPROM_MESSAGE_TABLE_MESSAGE_SIZE];
+    command.toCharArray(buffer, EEPROM_MESSAGE_TABLE_MESSAGE_SIZE);
+    addEntryToMessageTable(buffer);
+}
+
+static void serialCommandWriteWaterMessage(const String& command) {
+    char buffer[EEPROM_MESSAGE_TABLE_MESSAGE_SIZE];
+    command.toCharArray(buffer, EEPROM_MESSAGE_TABLE_MESSAGE_SIZE);
+    addEntryToWaterTable(buffer);
+}
+
+static void serialCommandDeleteMessage(const String& command) {
+    uint8_t index = command.toInt();
+    deleteMessageFromTable(index);
+}
+
+static void serialCommandDeleteWaterMessage(const String& command) {
+    uint8_t index = command.toInt();
+    deleteWaterMessageFromTable(index);
+}
+
+float temperature = 0.0;
+int waterDetected = 0;
+int val;
+int tempPin = A1;
+int ledPin = 5;
+int waterPin = A2;
+
+float readTemperature() {
+    int sensorValue = analogRead(tempPin);
+    float voltage = sensorValue * (5.0 / 1023.0);
+    float temperatureC = (voltage - 0.5) * 100;
+    return temperatureC;
+}
+
+int readWaterSensor() {
+    delay(10);
+    val = analogRead(waterPin);
+    if (val > WATER_THRESHOLD) {
+        String timestamp = String(millis() / 1000);
+        String message = timestamp + "|Water level: " + String(val);
+        serialCommandWriteWaterMessage(message);
+    }
+    return val;
+}
+
+void initializeEEPROM() {
+    if (EEPROM.read(EEPROM_INITIALIZATION_FLAG_ADDRESS) != EEPROM_INITIALIZATION_FLAG) {
+        for (uint8_t i = 0; i < EEPROM_MESSAGE_TABLE_ENTRIES_SIZE; i++) {
+            messageTable.entry[i].valid = 0;
+            memset(messageTable.entry[i].message, 0, EEPROM_MESSAGE_TABLE_MESSAGE_SIZE);
+        }
+        writeMessageTableToEEPROM();
+        
+        for (uint8_t i = 0; i < EEPROM_MESSAGE_TABLE_ENTRIES_SIZE; i++) {
+            waterTable.entry[i].valid = 0;
+            memset(waterTable.entry[i].message, 0, EEPROM_MESSAGE_TABLE_MESSAGE_SIZE);
+        }
+        writeWaterTableToEEPROM();
+        
+        EEPROM.write(EEPROM_INITIALIZATION_FLAG_ADDRESS, EEPROM_INITIALIZATION_FLAG);
+    }
+}
+
+String getCommandType(const String& command) {
+    if (command.startsWith("T")) {
+        return "T";
+    } else if (command.startsWith("W:")) {
+        return "W";
+    } else if (command.startsWith("L")) {
+        return "L";
+    } else if (command.startsWith("R")) {
+        return "R";
+    } else if (command.startsWith("D")) {
+        return "D";
+    } else if (command.startsWith("S")) {
+        return "S";
+    } else if (command.startsWith("M:")) {
+        return "M";
+    } else if (command.startsWith("w:")) {
+        return "w";
+    } else {
+        return "UNKNOWN";
+    }
+}
+
+void setup() {
+    Serial.begin(9600);
+    pinMode(ledPin, OUTPUT);
+    digitalWrite(ledPin, LOW);
+    pinMode(waterPin, INPUT);
+
+    initializeEEPROM();
+    readMessageTableFromEEPROM();
+    readWaterTableFromEEPROM();
+    Serial.setTimeout(100);
+    Serial.println("Arduino is ready. Send commands: 'T', 'W:<timestamp>|<message>', 'L', 'R', 'D:<message>', 'S', 'M:<index>', 'w:<index>'");
+}
+
+void loop() {
+    if (Serial.available() > 0) {
+        String command = Serial.readStringUntil('\n');
+        command.trim();
+
+        String commandType = getCommandType(command);
+
+        switch (commandType.charAt(0)) {
+            case 'T':
+                temperature = readTemperature();
+                Serial.print("Temperature: ");
+                Serial.print(temperature);
+                Serial.println(" C");
+                break;
+
+            case 'W':
+                serialCommandWriteMessage(command.substring(2));
+                break;
+
+            case 'L':
+                digitalWrite(ledPin, !digitalRead(ledPin));
+                Serial.print("LED is now: ");
+                Serial.println(digitalRead(ledPin) ? "ON" : "OFF");
+                break;
+
+            case 'R':
+                serialCommandReadMessages();
+                break;
+
+            case 'D':
+                waterDetected = readWaterSensor();
+                Serial.print("Water detected: ");
+                Serial.println(waterDetected);
+                break;
+
+            case 'S':
+                serialCommandReadWaterLevels();
+                break;
+
+            case 'M':
+                serialCommandDeleteMessage(command.substring(2));
+                break;
+
+            case 'w':
+                serialCommandDeleteWaterMessage(command.substring(2));
+                break;
+
+            default:
+                Serial.println("Unknown command. Please send 'T', 'W:<timestamp>|<message>', 'L', 'R', 'D:<message>', 'S', 'M:<index>', 'w:<index>'.");
+                break;
+        }
+    }
+}

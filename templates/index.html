@@ -2,9 +2,8 @@
 <html>
 
 <head>
-    <title>Arduino Temperature</title>
+    <title>Arduino Microcontroller</title>
     <style>
-        
         .toggle-button {
             position: absolute;
             top: 10px;
@@ -35,7 +34,6 @@
 
         .status-off {
             background-color: red;
-
         }
 
         #led-status {
@@ -48,21 +46,51 @@
 
         p {
             margin-bottom: 20px;
-            
         }
     </style>
 </head>
 
 <body>
-    <h1>Arduino Temperature</h1>
+    <h4>Arduino Temperature</h4>
     <p>Temperature: {{ temperatura }}&deg;C</p>
 
-    <button class="toggle-button" onclick="toggleLED()">Toggle LED</button> <!-- buton pt a schimba led-ul, ON / OFF-->
-
-    <p id="led-status">LED is {% if led_state %}ON{% else %}OFF{% endif %}</p> <!-- mesaj care zice starea led-ului-->
-
+    <button class="toggle-button" onclick="toggleLED()">Toggle LED</button>
+    <p id="led-status">LED is {% if led_state %}ON{% else %}OFF{% endif %}</p>
     <div id="status-box" class="status-box {% if led_state %}status-on{% else %}status-off{% endif %}"></div>
 
+    <h4>Enter your message to send to the microcontroller</h4>
+    <form action="/send_message" method="post">
+        <input type="text" id="message" name="message">
+        <button type="submit">Send</button>
+    </form>
+
+    <h4>Last 10 Messages</h4>
+    <ul>
+        {% for message in messages %}
+            <li>
+                {{ message }}
+                {% if message.strip() != '' %}
+                    <form action="/delete_message/{{ loop.index0 }}" method="post" style="display:inline;">
+                        <button type="submit">Delete</button>
+                    </form>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
+
+    <h4>Last 10 Water Sensor Messages</h4>
+    <ul class="water-levels-list">
+        {% for water_level in water_levels %}
+            <li>
+                {{ water_level }}
+                {% if water_level.strip() != '' %}
+                    <form action="/delete_water_message/{{ loop.index0 }}" method="post" style="display:inline;">
+                        <button type="submit">Delete</button>
+                    </form>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ul>
 
     <script>
         function toggleLED() {
@@ -76,32 +104,22 @@
             xhttp.open("POST", "/toggle_led", true);
             xhttp.send();
         }
+
+        function updateWaterSensor() {
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var response = JSON.parse(this.responseText);
+                    console.log("Updated water sensor value: " + response.water_sensor_value);
+                    // Optionally update the web page with the new water sensor value
+                }
+            };
+            xhttp.open("GET", "/update_water_sensor", true);
+            xhttp.send();
+        }
+
+        setInterval(updateWaterSensor, 5000);  // Update water sensor every 5 seconds
     </script>
-
-    <!DOCTYPE html>
-    <html>
-
-    <head>
-        <title>Send Messages to Arduino</title>
-        <script>
-            function sendMessage() {
-                var message = document.getElementById("message").value;
-                var xhttp = new XMLHttpRequest();
-                xhttp.open("POST", "/send_message", true);
-                xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-                xhttp.send("message=" + message);
-            }
-        </script>
-    </head>
-
-    <body>
-        <p>Enter your message to send to the microcontroller</p>
-        <input type="text" id="message">
-        <button onclick="sendMessage()">Send</button>
-    </body>
-
-    </html>
-
 
 </body>
 
